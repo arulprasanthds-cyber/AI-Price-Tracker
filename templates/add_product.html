@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+
+
+{% block title %}
+
+Add Product - AI Price Tracker
+
+{% endblock %}
+
+
+
+{% block content %}
+
+
+<div class="auth-box">
+
+
+<h1>
+➕ Add Product
+</h1>
+
+
+
+<form method="POST">
+
+
+
+<label>
+Product Name
+</label>
+
+
+<input
+type="text"
+name="product_name"
+placeholder="Enter product name"
+required>
+
+
+
+<label>
+Product URL
+</label>
+
+
+<input
+type="url"
+name="product_url"
+placeholder="Paste product link"
+required>
+
+
+
+<label>
+Current Price
+</label>
+
+
+<input
+type="number"
+step="0.01"
+name="current_price"
+placeholder="Enter current price"
+required>
+
+
+
+<label>
+Target Price
+</label>
+
+
+<input
+type="number"
+step="0.01"
+name="target_price"
+placeholder="Enter target price"
+required>
+
+
+
+<button type="submit">
+
+Save Product
+
+</button>
+
+
+
+</form>
+
+
+
+<br>
+
+
+<a href="{{ url_for('dashboard.dashboard_home') }}">
+
+⬅ Back to Dashboard
+
+</a>
+
+
+
+</div>
+
+
+{% endblock %}

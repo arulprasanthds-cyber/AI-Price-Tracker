@@ -1,0 +1,419 @@
+```html
+{% extends "base.html" %}
+
+{% block title %}
+Dashboard - AI Price Tracker
+{% endblock %}
+
+{% block content %}
+
+<div class="dashboard">
+
+    <!-- ============================= -->
+    <!-- Header -->
+    <!-- ============================= -->
+
+    <div class="dashboard-header">
+
+        <div>
+            <h1>
+                Welcome, {{ current_user.username }} 👋
+            </h1>
+
+            <p class="dashboard-subtitle">
+                Track your product prices easily
+            </p>
+        </div>
+
+        <a
+            class="add-btn"
+            href="{{ url_for('dashboard.add_product') }}"
+        >
+            ➕ Add Product
+        </a>
+
+    </div>
+
+
+    <!-- ============================= -->
+    <!-- Dashboard Cards -->
+    <!-- ============================= -->
+
+    <div class="cards">
+
+        <div class="card">
+
+            <div class="card-icon">
+                📦
+            </div>
+
+            <h2>
+                {{ total_products }}
+            </h2>
+
+            <p>
+                Total Products
+            </p>
+
+        </div>
+
+
+        <div class="card">
+
+            <div class="card-icon">
+                ⏳
+            </div>
+
+            <h2>
+                {{ tracking_products }}
+            </h2>
+
+            <p>
+                Active Tracking
+            </p>
+
+        </div>
+
+
+        <div class="card">
+
+            <div class="card-icon">
+                🎯
+            </div>
+
+            <h2>
+                {{ target_products }}
+            </h2>
+
+            <p>
+                Target Reached
+            </p>
+
+        </div>
+
+    </div>
+
+
+    <!-- ============================= -->
+    <!-- Product Box -->
+    <!-- ============================= -->
+
+    <div class="product-box">
+
+        <div class="product-box-header">
+
+            <div>
+                <h2>
+                    📦 Recent Products
+                </h2>
+
+                <p>
+                    Your tracked products
+                </p>
+            </div>
+
+            <span class="product-count">
+                {{ total_products }} Products
+            </span>
+
+        </div>
+
+
+        <div class="table-container">
+
+            <table>
+
+                <thead>
+
+                    <tr>
+
+                        <th>
+                            Product
+                        </th>
+
+                        <th>
+                            Current Price
+                        </th>
+
+                        <th>
+                            Target Price
+                        </th>
+
+                        <th>
+                            Price Direction
+                        </th>
+
+                        <th>
+                            Status
+                        </th>
+
+                        <th>
+                            Last Checked
+                        </th>
+
+                        <th>
+                            Actions
+                        </th>
+
+                    </tr>
+
+                </thead>
+
+
+                <tbody>
+
+                    {% for product in products %}
+
+                    <tr>
+
+                        <!-- ============================= -->
+                        <!-- Product -->
+                        <!-- ============================= -->
+
+                        <td class="product-cell">
+
+                            {% if product.image_url %}
+
+                            <img
+                                src="{{ product.image_url }}"
+                                alt="{{ product.product_name }}"
+                                class="product-image"
+                            >
+
+                            {% else %}
+
+                            <div class="product-image-placeholder">
+                                📦
+                            </div>
+
+                            {% endif %}
+
+
+                            <div class="product-info">
+
+                                {% if product.product_url %}
+
+                                <a
+                                    href="{{ product.product_url }}"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    class="product-link"
+                                >
+                                    {{ product.product_name }}
+                                </a>
+
+                                {% else %}
+
+                                <span class="product-link">
+                                    {{ product.product_name }}
+                                </span>
+
+                                {% endif %}
+
+                            </div>
+
+                        </td>
+
+
+                        <!-- ============================= -->
+                        <!-- Current Price -->
+                        <!-- ============================= -->
+
+                        <td>
+
+                            <strong class="current-price">
+                                ₹{{ "%.2f"|format(product.current_price) }}
+                            </strong>
+
+                        </td>
+
+
+                        <!-- ============================= -->
+                        <!-- Target Price -->
+                        <!-- ============================= -->
+
+                        <td>
+
+                            <strong class="target-price">
+                                ₹{{ "%.2f"|format(product.target_price) }}
+                            </strong>
+
+                        </td>
+
+
+                        <!-- ============================= -->
+                        <!-- Price Direction -->
+                        <!-- ============================= -->
+
+                        <td>
+
+                            {% if product.price_direction == "Down" %}
+
+                                <span class="direction down">
+                                    📉 Down
+                                </span>
+
+                            {% elif product.price_direction == "Up" %}
+
+                                <span class="direction up">
+                                    📈 Up
+                                </span>
+
+                            {% else %}
+
+                                <span class="direction same">
+                                    ➖ Same
+                                </span>
+
+                            {% endif %}
+
+                        </td>
+
+
+                        <!-- ============================= -->
+                        <!-- Status -->
+                        <!-- ============================= -->
+
+                        <td>
+
+                            {% if product.status == "Target Reached" %}
+
+                                <span class="status success">
+                                    🎯 Target Reached
+                                </span>
+
+                            {% else %}
+
+                                <span class="status tracking">
+                                    ⏳ Tracking
+                                </span>
+
+                            {% endif %}
+
+                        </td>
+
+
+                        <!-- ============================= -->
+                        <!-- Last Checked -->
+                        <!-- ============================= -->
+
+                        <td>
+
+                            {% if product.last_checked %}
+
+                                <span class="last-checked">
+
+                                    {{ product.last_checked.strftime(
+                                        "%d-%m-%Y %H:%M"
+                                    ) }}
+
+                                </span>
+
+                            {% else %}
+
+                                <span class="last-checked">
+                                    Not checked
+                                </span>
+
+                            {% endif %}
+
+                        </td>
+
+
+                        <!-- ============================= -->
+                        <!-- Actions -->
+                        <!-- ============================= -->
+
+                        <td class="actions">
+
+                            {% if product.product_url %}
+
+                            <a
+                                href="{{ product.product_url }}"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                class="track-btn"
+                                title="Open Product"
+                            >
+                                🔗
+                            </a>
+
+                            {% endif %}
+
+
+                            <a
+                                href="{{ url_for(
+                                    'dashboard.product_history',
+                                    id=product.id
+                                ) }}"
+                                class="graph-btn"
+                                title="Price History"
+                            >
+                                📊
+                            </a>
+
+
+                            <a
+                                href="{{ url_for(
+                                    'dashboard.delete_product',
+                                    id=product.id
+                                ) }}"
+                                class="delete-btn"
+                                title="Delete Product"
+                                onclick="return confirm('Delete this product?')"
+                            >
+                                🗑️
+                            </a>
+
+                        </td>
+
+                    </tr>
+
+
+                    {% else %}
+
+                    <tr>
+
+                        <td colspan="7">
+
+                            <div class="empty-products">
+
+                                <div class="empty-icon">
+                                    📦
+                                </div>
+
+                                <h3>
+                                    No Products Added
+                                </h3>
+
+                                <p>
+                                    Add a product to start tracking its price.
+                                </p>
+
+                                <a
+                                    class="add-btn"
+                                    href="{{ url_for('dashboard.add_product') }}"
+                                >
+                                    ➕ Add Product
+                                </a>
+
+                            </div>
+
+                        </td>
+
+                    </tr>
+
+                    {% endfor %}
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+    </div>
+
+</div>
+
+{% endblock %}
+```

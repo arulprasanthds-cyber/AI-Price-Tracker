@@ -1,0 +1,14 @@
+Flask
+Flask-SQLAlchemy
+Flask-Login
+Flask-Mail
+Werkzeug
+python-dotenv
+APScheduler
+requests
+beautifulsoup4
+pandas
+numpy
+scikit-learn
+joblib
+email-validator

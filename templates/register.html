@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+
+
+{% block title %}
+
+Register - AI Price Tracker
+
+{% endblock %}
+
+
+
+{% block content %}
+
+
+<div class="auth-box">
+
+
+<h1>
+📝 Create Account
+</h1>
+
+
+
+<form method="POST">
+
+
+<label>
+Username
+</label>
+
+
+<input 
+type="text"
+name="username"
+placeholder="Enter username"
+required>
+
+
+
+<label>
+Email
+</label>
+
+
+<input
+type="email"
+name="email"
+placeholder="Enter Gmail"
+required>
+
+
+
+<label>
+Password
+</label>
+
+
+<input
+type="password"
+name="password"
+placeholder="Create password"
+required>
+
+
+
+<label>
+Confirm Password
+</label>
+
+
+<input
+type="password"
+name="confirm_password"
+placeholder="Confirm password"
+required>
+
+
+
+<button type="submit">
+
+Register
+
+</button>
+
+
+</form>
+
+
+
+<p>
+
+Already have account?
+
+<a href="{{ url_for('auth.login') }}">
+
+Login
+
+</a>
+
+
+</p>
+
+
+
+</div>
+
+
+{% endblock %}

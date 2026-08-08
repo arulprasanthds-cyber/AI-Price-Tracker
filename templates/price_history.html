@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+
+
+{% block title %}
+Price History
+{% endblock %}
+
+
+
+{% block content %}
+
+
+<div class="product-box">
+
+
+    <h1>
+        📊 {{ product.product_name }}
+    </h1>
+
+
+    <h3>
+        Price History
+    </h3>
+
+
+    <br>
+
+
+    <canvas id="priceChart"></canvas>
+
+
+    <br>
+
+
+    <a href="{{ url_for('dashboard.dashboard_home') }}"
+       class="add-btn">
+
+        ⬅ Back Dashboard
+
+    </a>
+
+
+</div>
+
+
+
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+
+
+<script>
+
+
+const dates = JSON.parse('{{ dates | tojson | safe }}');
+
+const prices = JSON.parse('{{ prices | tojson | safe }}');
+
+
+const ctx = document
+    .getElementById("priceChart")
+    .getContext("2d");
+
+
+
+new Chart(ctx, {
+
+    type: "line",
+
+
+    data: {
+
+        labels: dates,
+
+
+        datasets: [{
+
+            label: "Product Price (₹)",
+
+            data: prices,
+
+            borderWidth: 3,
+
+            tension: 0.4
+
+        }]
+
+    },
+
+
+    options: {
+
+        responsive: true,
+
+
+        scales: {
+
+            y: {
+
+                beginAtZero: false
+
+            }
+
+        }
+
+    }
+
+});
+
+
+</script>
+
+
+
+{% endblock %}
