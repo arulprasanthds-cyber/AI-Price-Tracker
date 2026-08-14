@@ -326,6 +326,8 @@ Dashboard - AI Price Tracker
 
                         <td class="actions">
 
+                            <!-- Open Product -->
+
                             {% if product.product_url %}
 
                             <a
@@ -341,6 +343,8 @@ Dashboard - AI Price Tracker
                             {% endif %}
 
 
+                            <!-- Price History -->
+
                             <a
                                 href="{{ url_for(
                                     'dashboard.product_history',
@@ -352,6 +356,23 @@ Dashboard - AI Price Tracker
                                 📊
                             </a>
 
+
+                            <!-- Test Email -->
+
+                            <a
+                                href="{{ url_for(
+                                    'dashboard.test_email',
+                                    id=product.id
+                                ) }}"
+                                class="email-test-btn"
+                                title="Send Test Email"
+                                onclick="return confirm('Send a test email to your registered email?')"
+                            >
+                                📧
+                            </a>
+
+
+                            <!-- Delete Product -->
 
                             <a
                                 href="{{ url_for(
@@ -371,6 +392,10 @@ Dashboard - AI Price Tracker
 
 
                     {% else %}
+
+                    <!-- ============================= -->
+                    <!-- Empty Products -->
+                    <!-- ============================= -->
 
                     <tr>
 
@@ -416,4 +441,3 @@ Dashboard - AI Price Tracker
 </div>
 
 {% endblock %}
-```

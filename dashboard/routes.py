@@ -12,26 +12,27 @@ from flask_login import (
     current_user
 )
 
+from flask_mail import Message
+
 from datetime import datetime
 
 from dashboard import dashboard
 
-from extensions import db
+from extensions import db, mail
 
 from models import Product, PriceHistory
 
 from scraper.scraper_manager import get_product_details
 
 
-# ==========================================
-# Dashboard Home
-# ==========================================
+# =========================================================
+# DASHBOARD HOME
+# =========================================================
 
 @dashboard.route("/dashboard")
 @login_required
 def dashboard_home():
 
-    # Only show products belonging to logged-in user
     products = Product.query.filter_by(
         user_id=current_user.id
     ).order_by(
@@ -59,9 +60,9 @@ def dashboard_home():
     )
 
 
-# ==========================================
-# Add Product
-# ==========================================
+# =========================================================
+# ADD PRODUCT
+# =========================================================
 
 @dashboard.route(
     "/add-product",
@@ -92,53 +93,46 @@ def add_product():
             ""
         ).strip()
 
-
-        # --------------------------------------
-        # Validate Required Fields
-        # --------------------------------------
+        # =================================================
+        # VALIDATION
+        # =================================================
 
         if not product_name:
+
             flash(
                 "Product name is required.",
                 "danger"
             )
 
             return redirect(
-                url_for(
-                    "dashboard.add_product"
-                )
+                url_for("dashboard.add_product")
             )
 
-
         if not product_url:
+
             flash(
                 "Product URL is required.",
                 "danger"
             )
 
             return redirect(
-                url_for(
-                    "dashboard.add_product"
-                )
+                url_for("dashboard.add_product")
             )
 
-
         if not target_price:
+
             flash(
                 "Target price is required.",
                 "danger"
             )
 
             return redirect(
-                url_for(
-                    "dashboard.add_product"
-                )
+                url_for("dashboard.add_product")
             )
 
-
-        # --------------------------------------
-        # Convert Target Price
-        # --------------------------------------
+        # =================================================
+        # TARGET PRICE
+        # =================================================
 
         try:
 
@@ -149,7 +143,7 @@ def add_product():
             if target_price_value <= 0:
                 raise ValueError
 
-        except ValueError:
+        except (ValueError, TypeError):
 
             flash(
                 "Please enter a valid target price.",
@@ -157,15 +151,12 @@ def add_product():
             )
 
             return redirect(
-                url_for(
-                    "dashboard.add_product"
-                )
+                url_for("dashboard.add_product")
             )
 
-
-        # --------------------------------------
-        # Try to Fetch Product Details
-        # --------------------------------------
+        # =================================================
+        # SCRAPE PRODUCT
+        # =================================================
 
         scraped_price = None
         image_url = None
@@ -197,10 +188,11 @@ def add_product():
                 f"⚠️ Product scraping error: {e}"
             )
 
+        # =================================================
+        # CURRENT PRICE
+        # =================================================
 
-        # --------------------------------------
-        # Determine Current Price
-        # --------------------------------------
+        current_price_value = None
 
         if scraped_price is not None:
 
@@ -210,18 +202,19 @@ def add_product():
                     scraped_price
                 )
 
-            except (TypeError, ValueError):
+                if current_price_value <= 0:
+                    current_price_value = None
+
+            except (
+                TypeError,
+                ValueError
+            ):
 
                 current_price_value = None
 
-        else:
-
-            current_price_value = None
-
-
-        # --------------------------------------
-        # Fallback to Manual Price
-        # --------------------------------------
+        # =================================================
+        # MANUAL PRICE FALLBACK
+        # =================================================
 
         if current_price_value is None:
 
@@ -234,9 +227,7 @@ def add_product():
                 )
 
                 return redirect(
-                    url_for(
-                        "dashboard.add_product"
-                    )
+                    url_for("dashboard.add_product")
                 )
 
             try:
@@ -248,7 +239,10 @@ def add_product():
                 if current_price_value <= 0:
                     raise ValueError
 
-            except ValueError:
+            except (
+                ValueError,
+                TypeError
+            ):
 
                 flash(
                     "Please enter a valid current price.",
@@ -256,15 +250,12 @@ def add_product():
                 )
 
                 return redirect(
-                    url_for(
-                        "dashboard.add_product"
-                    )
+                    url_for("dashboard.add_product")
                 )
 
-
-        # --------------------------------------
-        # Use Scraped Product Name
-        # --------------------------------------
+        # =================================================
+        # PRODUCT NAME
+        # =================================================
 
         final_product_name = (
             scraped_name
@@ -272,89 +263,79 @@ def add_product():
             else product_name
         )
 
+        # =================================================
+        # PRODUCT STATUS
+        # =================================================
 
-        # --------------------------------------
-        # Create Product
-        # --------------------------------------
+        if current_price_value <= target_price_value:
+
+            product_status = "Target Reached"
+
+        else:
+
+            product_status = "Tracking"
+
+        # =================================================
+        # CREATE PRODUCT
+        # =================================================
 
         product = Product(
-
             user_id=current_user.id,
-
             product_name=final_product_name,
-
             product_url=product_url,
-
             image_url=image_url,
-
             current_price=current_price_value,
-
             target_price=target_price_value,
-
-            status=(
-                "Target Reached"
-                if current_price_value <= target_price_value
-                else "Tracking"
-            ),
-
             price_direction="Same",
-
+            status=product_status,
             last_checked=datetime.utcnow(),
-
             created_at=datetime.utcnow()
-
         )
 
-
-        db.session.add(
-            product
-        )
+        db.session.add(product)
 
         db.session.commit()
 
+        # =================================================
+        # FIRST PRICE HISTORY
+        # =================================================
 
-        # --------------------------------------
-        # First Price History Record
-        # --------------------------------------
-
-        price_history = PriceHistory(
-
+        history = PriceHistory(
             product_id=product.id,
-
             price=current_price_value,
-
             checked_at=datetime.utcnow()
-
         )
 
-        db.session.add(
-            price_history
-        )
+        db.session.add(history)
 
         db.session.commit()
 
+        print(
+            f"✅ Product saved permanently: "
+            f"{final_product_name}"
+        )
+
+        print(
+            f"👤 Owner: {current_user.email}"
+        )
 
         flash(
-            "✅ Product Added Successfully!",
+            "✅ Product added and saved successfully!",
             "success"
         )
 
-
         return redirect(
-            url_for(
-                "dashboard.dashboard_home"
-            )
+            url_for("dashboard.dashboard_home")
         )
-
 
     return render_template(
         "add_product.html"
     )
 
 
-# ==========================================
-# Delete Product
-# ==========================================
+# =========================================================
+# DELETE PRODUCT
+# =========================================================
 
 @dashboard.route(
     "/delete-product/<int:id>"
@@ -363,13 +344,9 @@ def add_product():
 def delete_product(id):
 
     product = Product.query.filter_by(
-
         id=id,
-
         user_id=current_user.id
-
     ).first()
-
 
     if not product:
 
@@ -379,35 +356,38 @@ def delete_product(id):
         )
 
         return redirect(
-            url_for(
-                "dashboard.dashboard_home"
-            )
+            url_for("dashboard.dashboard_home")
         )
 
+    product_name = product.product_name
 
-    db.session.delete(
-        product
-    )
+    # Delete price history
+    PriceHistory.query.filter_by(
+        product_id=product.id
+    ).delete()
+
+    # Delete product
+    db.session.delete(product)
 
     db.session.commit()
 
+    print(
+        f"🗑️ Product deleted: {product_name}"
+    )
 
     flash(
-        "🗑️ Product Deleted Successfully.",
+        "🗑️ Product deleted successfully.",
         "success"
     )
 
-
     return redirect(
-        url_for(
-            "dashboard.dashboard_home"
-        )
+        url_for("dashboard.dashboard_home")
     )
 
 
-# ==========================================
-# Price History Graph
-# ==========================================
+# =========================================================
+# PRICE HISTORY
+# =========================================================
 
 @dashboard.route(
     "/product-history/<int:id>"
@@ -415,31 +395,20 @@ def delete_product(id):
 @login_required
 def product_history(id):
 
-    # Make sure product belongs to current user
     product = Product.query.filter_by(
-
         id=id,
-
         user_id=current_user.id
-
     ).first_or_404()
 
-
     history = PriceHistory.query.filter_by(
-
         product_id=product.id
-
     ).order_by(
-
         PriceHistory.checked_at.asc()
-
     ).all()
-
 
     prices = []
 
     dates = []
-
 
     for item in history:
 
@@ -453,16 +422,128 @@ def product_history(id):
             )
         )
 
-
     return render_template(
-
         "price_history.html",
-
         product=product,
-
         prices=prices,
-
         dates=dates
-
     )
 
+
+# =========================================================
+# TEST EMAIL
+# =========================================================
+
+@dashboard.route(
+    "/test-email/<int:id>"
+)
+@login_required
+def test_email(id):
+
+    # =====================================================
+    # FIND USER'S OWN PRODUCT
+    # =====================================================
+
+    product = Product.query.filter_by(
+        id=id,
+        user_id=current_user.id
+    ).first()
+
+    if not product:
+
+        flash(
+            "Product not found.",
+            "danger"
+        )
+
+        return redirect(
+            url_for("dashboard.dashboard_home")
+        )
+
+    # =====================================================
+    # SEND EMAIL
+    # =====================================================
+
+    try:
+
+        msg = Message(
+            subject="AI Price Tracker - Test Email",
+            recipients=[
+                current_user.email
+            ]
+        )
+
+        msg.body = f"""
+Hello {current_user.username},
+
+This is a test email from AI Price Tracker.
+
+----------------------------------------
+PRODUCT DETAILS
+----------------------------------------
+
+Product Name : {product.product_name}
+Current Price: ₹{product.current_price}
+Target Price : ₹{product.target_price}
+Status       : {product.status}
+
+----------------------------------------
+
+Your email notification system is working successfully.
+
+AI Price Tracker
+"""
+
+        mail.send(msg)
+
+        print(
+            "=========================================="
+        )
+
+        print(
+            "✅ TEST EMAIL SENT SUCCESSFULLY"
+        )
+
+        print(
+            f"📧 To: {current_user.email}"
+        )
+
+        print(
+            f"📦 Product: {product.product_name}"
+        )
+
+        print(
+            "=========================================="
+        )
+
+        flash(
+            "📧 Test email sent successfully!",
+            "success"
+        )
+
+    except Exception as e:
+
+        print(
+            "=========================================="
+        )
+
+        print(
+            "❌ EMAIL SENDING FAILED"
+        )
+
+        print(
+            f"❌ Error: {e}"
+        )
+
+        print(
+            "=========================================="
+        )
+
+        flash(
+            f"❌ Email sending failed: {e}",
+            "danger"
+        )
+
+    return redirect(
+        url_for("dashboard.dashboard_home")
+    )
