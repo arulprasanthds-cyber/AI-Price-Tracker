@@ -17,10 +17,10 @@ scheduler = BackgroundScheduler()
 
 
 # =========================================================
-# SEND PRICE DROP EMAIL
+# SEND AUTOMATIC PRICE CHANGE EMAIL
 # =========================================================
 
-def send_price_drop_email(
+def send_price_change_email(
     owner_email,
     product_name,
     old_price,
@@ -31,19 +31,31 @@ def send_price_drop_email(
     try:
 
         # -------------------------------------------------
-        # PRICE DROP VALIDATION
+        # SAME PRICE = NO EMAIL
         # -------------------------------------------------
 
-        if new_price >= old_price:
+        if new_price == old_price:
 
-            print(
-                "ℹ️ No price drop. Email not sent."
-            )
+            print("➖ Price same. Email not sent.")
 
             return False
 
 
-        price_drop = old_price - new_price
+        # -------------------------------------------------
+        # DETERMINE PRICE DIRECTION
+        # -------------------------------------------------
+
+        if new_price < old_price:
+
+            direction = "📉 PRICE DROPPED"
+
+            difference = old_price - new_price
+
+        else:
+
+            direction = "📈 PRICE INCREASED"
+
+            difference = new_price - old_price
 
 
         # -------------------------------------------------
@@ -51,7 +63,7 @@ def send_price_drop_email(
         # -------------------------------------------------
 
         msg = Message(
-            subject="🔔 AI Price Tracker - Price Drop Alert",
+            subject="🔔 AI Price Tracker - Price Change Alert",
             recipients=[owner_email]
         )
 
@@ -59,12 +71,10 @@ def send_price_drop_email(
         msg.body = f"""
 Hello,
 
-Good news! 🎉
-
-The price of your tracked product has dropped.
+The price of your tracked product has changed.
 
 ==========================================
-        PRICE DROP ALERT
+        PRICE CHANGE ALERT
 ==========================================
 
 Product      : {product_name}
@@ -73,7 +83,9 @@ Old Price    : ₹{old_price:.2f}
 
 New Price    : ₹{new_price:.2f}
 
-Price Drop   : ₹{price_drop:.2f}
+Change       : ₹{difference:.2f}
+
+Direction    : {direction}
 
 Target Price : ₹{target_price:.2f}
 
@@ -91,38 +103,20 @@ Automatic Price Monitoring System
         mail.send(msg)
 
 
+        # -------------------------------------------------
+        # LOG
+        # -------------------------------------------------
+
         print()
-        print(
-            "=========================================="
-        )
-
-        print(
-            "📧 PRICE DROP EMAIL SENT"
-        )
-
-        print(
-            f"📧 To: {owner_email}"
-        )
-
-        print(
-            f"📦 Product: {product_name}"
-        )
-
-        print(
-            f"💰 ₹{old_price:.2f} → ₹{new_price:.2f}"
-        )
-
-        print(
-            f"📉 Price Drop: ₹{price_drop:.2f}"
-        )
-
-        print(
-            f"🎯 Target: ₹{target_price:.2f}"
-        )
-
-        print(
-            "=========================================="
-        )
+        print("==========================================")
+        print("📧 AUTOMATIC PRICE CHANGE EMAIL SENT")
+        print(f"📧 To: {owner_email}")
+        print(f"📦 Product: {product_name}")
+        print(f"💰 ₹{old_price:.2f} → ₹{new_price:.2f}")
+        print(f"📊 Direction: {direction}")
+        print(f"💵 Change: ₹{difference:.2f}")
+        print(f"🎯 Target: ₹{target_price:.2f}")
+        print("==========================================")
 
 
         return True
@@ -131,29 +125,12 @@ Automatic Price Monitoring System
     except Exception as e:
 
         print()
-        print(
-            "=========================================="
-        )
-
-        print(
-            "❌ PRICE DROP EMAIL FAILED"
-        )
-
-        print(
-            f"📧 To: {owner_email}"
-        )
-
-        print(
-            f"📦 Product: {product_name}"
-        )
-
-        print(
-            f"❌ Error: {e}"
-        )
-
-        print(
-            "=========================================="
-        )
+        print("==========================================")
+        print("❌ AUTOMATIC PRICE CHANGE EMAIL FAILED")
+        print(f"📧 To: {owner_email}")
+        print(f"📦 Product: {product_name}")
+        print(f"❌ Error: {e}")
+        print("==========================================")
 
 
         return False
@@ -166,22 +143,13 @@ Automatic Price Monitoring System
 def check_product_prices(app):
 
     print()
-    print(
-        "=========================================="
-    )
-
-    print(
-        "🔄 CHECKING PRODUCT PRICES"
-    )
-
+    print("==========================================")
+    print("🔄 CHECKING PRODUCT PRICES")
     print(
         f"🕒 Time: "
         f"{datetime.now().strftime('%d-%m-%Y %H:%M:%S')}"
     )
-
-    print(
-        "=========================================="
-    )
+    print("==========================================")
 
 
     with app.app_context():
@@ -199,9 +167,7 @@ def check_product_prices(app):
 
             if not products:
 
-                print(
-                    "ℹ️ No products found."
-                )
+                print("ℹ️ No products found.")
 
                 print(
                     "💡 Add a product from the dashboard."
@@ -308,6 +274,10 @@ def check_product_prices(app):
                         continue
 
 
+                    # =========================================
+                    # SCRAPER RESPONSE VALIDATION
+                    # =========================================
+
                     if not result:
 
                         print(
@@ -391,7 +361,7 @@ def check_product_prices(app):
 
                         product.price_direction = "Dropped"
 
-
+                        print()
                         print(
                             "📉 PRICE DROPPED"
                         )
@@ -409,7 +379,7 @@ def check_product_prices(app):
 
                         product.price_direction = "Increased"
 
-
+                        print()
                         print(
                             "📈 PRICE INCREASED"
                         )
@@ -427,13 +397,72 @@ def check_product_prices(app):
 
                         product.price_direction = "Same"
 
-
+                        print()
                         print(
                             "➖ PRICE SAME"
                         )
 
                         print(
                             f"   Price: ₹{new_price:.2f}"
+                        )
+
+
+                    # =========================================
+                    # AUTOMATIC PRICE CHANGE EMAIL
+                    # =========================================
+
+                    if new_price != old_price:
+
+                        owner = product.owner
+
+
+                        if owner and owner.email:
+
+                            email_sent = (
+                                send_price_change_email(
+
+                                    owner.email,
+
+                                    product.product_name,
+
+                                    old_price,
+
+                                    new_price,
+
+                                    target_price
+
+                                )
+                            )
+
+
+                            if email_sent:
+
+                                print(
+                                    "✅ Automatic price "
+                                    "change email sent."
+                                )
+
+                            else:
+
+                                print(
+                                    "⚠️ Automatic price "
+                                    "change email failed."
+                                )
+
+
+                        else:
+
+                            print(
+                                "⚠️ Product owner "
+                                "email missing."
+                            )
+
+
+                    else:
+
+                        print(
+                            "ℹ️ No price change. "
+                            "Automatic email not sent."
                         )
 
 
@@ -486,74 +515,6 @@ def check_product_prices(app):
                         )
 
 
-                        # -------------------------------------
-                        # CHECK PREVIOUS STATUS
-                        # -------------------------------------
-
-                        if product.status != "Target Reached":
-
-                            owner = product.owner
-
-
-                            if owner and owner.email:
-
-                                # ---------------------------------
-                                # SEND EMAIL ONLY FOR PRICE DROP
-                                # ---------------------------------
-
-                                if new_price < old_price:
-
-                                    email_sent = (
-                                        send_price_drop_email(
-
-                                            owner.email,
-
-                                            product.product_name,
-
-                                            old_price,
-
-                                            new_price,
-
-                                            target_price
-
-                                        )
-                                    )
-
-
-                                    if email_sent:
-
-                                        print(
-                                            "✅ Target alert email sent."
-                                        )
-
-                                    else:
-
-                                        print(
-                                            "⚠️ Target alert email failed."
-                                        )
-
-                                else:
-
-                                    print(
-                                        "ℹ️ Target reached, "
-                                        "but price did not drop."
-                                    )
-
-
-                            else:
-
-                                print(
-                                    "⚠️ Product owner email missing."
-                                )
-
-
-                        else:
-
-                            print(
-                                "ℹ️ Target was already reached."
-                            )
-
-
                         product.status = "Target Reached"
 
 
@@ -568,6 +529,10 @@ def check_product_prices(app):
 
                     db.session.commit()
 
+
+                    # =========================================
+                    # SUCCESS LOG
+                    # =========================================
 
                     print()
                     print(
@@ -633,18 +598,9 @@ def check_product_prices(app):
 
 
     print()
-    print(
-        "=========================================="
-    )
-
-    print(
-        "🏁 PRICE CHECK COMPLETED"
-    )
-
-    print(
-        "=========================================="
-    )
-
+    print("==========================================")
+    print("🏁 PRICE CHECK COMPLETED")
+    print("==========================================")
     print()
 
 
@@ -695,9 +651,9 @@ def start_scheduler(app):
 
         trigger="interval",
 
-        # -----------------------------------------------
+        # -------------------------------------------------
         # CHECK EVERY 30 MINUTES
-        # -----------------------------------------------
+        # -------------------------------------------------
 
         minutes=30,
 
