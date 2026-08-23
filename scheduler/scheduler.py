@@ -17,10 +17,10 @@ scheduler = BackgroundScheduler()
 
 
 # =========================================================
-# SEND AUTOMATIC PRICE CHANGE EMAIL
+# SEND TARGET PRICE EMAIL
 # =========================================================
 
-def send_price_change_email(
+def send_target_price_email(
     owner_email,
     product_name,
     old_price,
@@ -30,108 +30,61 @@ def send_price_change_email(
 
     try:
 
-        # -------------------------------------------------
-        # SAME PRICE = NO EMAIL
-        # -------------------------------------------------
-
-        if new_price == old_price:
-
-            print("➖ Price same. Email not sent.")
-
-            return False
-
-
-        # -------------------------------------------------
-        # DETERMINE PRICE DIRECTION
-        # -------------------------------------------------
-
-        if new_price < old_price:
-
-            direction = "📉 PRICE DROPPED"
-
-            difference = old_price - new_price
-
-        else:
-
-            direction = "📈 PRICE INCREASED"
-
-            difference = new_price - old_price
-
-
-        # -------------------------------------------------
-        # CREATE EMAIL
-        # -------------------------------------------------
-
         msg = Message(
-            subject="🔔 AI Price Tracker - Price Change Alert",
+            subject="🎯 AI Price Tracker - Target Price Reached",
             recipients=[owner_email]
         )
-
 
         msg.body = f"""
 Hello,
 
-The price of your tracked product has changed.
+Good news! 🎉
+
+The target price for your tracked product has been reached.
 
 ==========================================
-        PRICE CHANGE ALERT
+        TARGET PRICE REACHED
 ==========================================
 
-Product      : {product_name}
+Product       : {product_name}
 
-Old Price    : ₹{old_price:.2f}
+Previous Price: ₹{old_price:.2f}
 
-New Price    : ₹{new_price:.2f}
+Current Price : ₹{new_price:.2f}
 
-Change       : ₹{difference:.2f}
-
-Direction    : {direction}
-
-Target Price : ₹{target_price:.2f}
+Target Price  : ₹{target_price:.2f}
 
 ==========================================
+
+Your target price has been reached.
 
 AI Price Tracker
 Automatic Price Monitoring System
 """
 
-
-        # -------------------------------------------------
-        # SEND EMAIL
-        # -------------------------------------------------
-
         mail.send(msg)
-
-
-        # -------------------------------------------------
-        # LOG
-        # -------------------------------------------------
 
         print()
         print("==========================================")
-        print("📧 AUTOMATIC PRICE CHANGE EMAIL SENT")
+        print("📧 TARGET PRICE EMAIL SENT")
         print(f"📧 To: {owner_email}")
         print(f"📦 Product: {product_name}")
-        print(f"💰 ₹{old_price:.2f} → ₹{new_price:.2f}")
-        print(f"📊 Direction: {direction}")
-        print(f"💵 Change: ₹{difference:.2f}")
+        print(f"💰 Old: ₹{old_price:.2f}")
+        print(f"💰 New: ₹{new_price:.2f}")
         print(f"🎯 Target: ₹{target_price:.2f}")
         print("==========================================")
 
-
         return True
-
 
     except Exception as e:
 
         print()
         print("==========================================")
-        print("❌ AUTOMATIC PRICE CHANGE EMAIL FAILED")
+        print("❌ TARGET PRICE EMAIL FAILED")
         print(f"📧 To: {owner_email}")
         print(f"📦 Product: {product_name}")
         print(f"❌ Error: {e}")
         print("==========================================")
-
 
         return False
 
@@ -168,10 +121,7 @@ def check_product_prices(app):
             if not products:
 
                 print("ℹ️ No products found.")
-
-                print(
-                    "💡 Add a product from the dashboard."
-                )
+                print("💡 Add a product from the dashboard.")
 
                 return
 
@@ -190,27 +140,20 @@ def check_product_prices(app):
                 try:
 
                     print()
-                    print(
-                        "------------------------------------------"
-                    )
-
+                    print("------------------------------------------")
                     print(
                         f"🔍 Checking: "
                         f"{product.product_name}"
                     )
-
                     print(
                         f"👤 Owner ID: "
                         f"{product.user_id}"
                     )
-
-                    print(
-                        "------------------------------------------"
-                    )
+                    print("------------------------------------------")
 
 
                     # =========================================
-                    # BASIC VALIDATION
+                    # VALIDATION
                     # =========================================
 
                     if not product.product_url:
@@ -241,13 +184,12 @@ def check_product_prices(app):
 
 
                     # =========================================
-                    # OLD PRICE
+                    # OLD PRICE / TARGET PRICE
                     # =========================================
 
                     old_price = float(
                         product.current_price
                     )
-
 
                     target_price = float(
                         product.target_price
@@ -255,7 +197,7 @@ def check_product_prices(app):
 
 
                     # =========================================
-                    # SCRAPE NEW PRODUCT DATA
+                    # SCRAPE PRODUCT
                     # =========================================
 
                     try:
@@ -275,7 +217,7 @@ def check_product_prices(app):
 
 
                     # =========================================
-                    # SCRAPER RESPONSE VALIDATION
+                    # VALIDATE SCRAPER RESULT
                     # =========================================
 
                     if not result:
@@ -289,18 +231,13 @@ def check_product_prices(app):
 
                     if not result.get("success"):
 
-                        error_message = result.get(
-                            "error",
-                            "Unknown scraper error"
-                        )
-
                         print(
                             "⚠️ Scraping failed."
                         )
 
                         print(
                             f"   Reason: "
-                            f"{error_message}"
+                            f"{result.get('error', 'Unknown error')}"
                         )
 
                         continue
@@ -354,7 +291,7 @@ def check_product_prices(app):
 
 
                     # =========================================
-                    # PRICE COMPARISON
+                    # PRICE DIRECTION
                     # =========================================
 
                     if new_price < old_price:
@@ -362,14 +299,10 @@ def check_product_prices(app):
                         product.price_direction = "Dropped"
 
                         print()
-                        print(
-                            "📉 PRICE DROPPED"
-                        )
-
+                        print("📉 PRICE DROPPED")
                         print(
                             f"   Old: ₹{old_price:.2f}"
                         )
-
                         print(
                             f"   New: ₹{new_price:.2f}"
                         )
@@ -380,14 +313,10 @@ def check_product_prices(app):
                         product.price_direction = "Increased"
 
                         print()
-                        print(
-                            "📈 PRICE INCREASED"
-                        )
-
+                        print("📈 PRICE INCREASED")
                         print(
                             f"   Old: ₹{old_price:.2f}"
                         )
-
                         print(
                             f"   New: ₹{new_price:.2f}"
                         )
@@ -398,20 +327,80 @@ def check_product_prices(app):
                         product.price_direction = "Same"
 
                         print()
-                        print(
-                            "➖ PRICE SAME"
-                        )
-
+                        print("➖ PRICE SAME")
                         print(
                             f"   Price: ₹{new_price:.2f}"
                         )
 
 
                     # =========================================
-                    # AUTOMATIC PRICE CHANGE EMAIL
+                    # TARGET PRICE CHECK
                     # =========================================
 
-                    if new_price != old_price:
+                    target_reached_now = (
+                        new_price <= target_price
+                        and old_price > target_price
+                    )
+
+
+                    already_reached = (
+                        old_price <= target_price
+                    )
+
+
+                    if new_price <= target_price:
+
+                        product.status = "Target Reached"
+
+                        print()
+                        print("🎯 TARGET PRICE REACHED!")
+                        print(
+                            f"   Current: "
+                            f"₹{new_price:.2f}"
+                        )
+                        print(
+                            f"   Target : "
+                            f"₹{target_price:.2f}"
+                        )
+
+                    else:
+
+                        product.status = "Tracking"
+
+                        print()
+                        print("⏳ TARGET NOT REACHED")
+                        print(
+                            f"   Current: "
+                            f"₹{new_price:.2f}"
+                        )
+                        print(
+                            f"   Target : "
+                            f"₹{target_price:.2f}"
+                        )
+
+
+                    # =========================================
+                    # TARGET EMAIL
+                    # =========================================
+                    #
+                    # Email ONLY when price crosses target
+                    # for the first time.
+                    #
+                    # Example:
+                    #
+                    # ₹55,000 → ₹49,999
+                    # Target ₹50,000
+                    #
+                    # Email YES
+                    #
+                    # Next check:
+                    # ₹49,999 → ₹49,500
+                    #
+                    # Email NO
+                    #
+                    # =========================================
+
+                    if target_reached_now and not already_reached:
 
                         owner = product.owner
 
@@ -419,7 +408,7 @@ def check_product_prices(app):
                         if owner and owner.email:
 
                             email_sent = (
-                                send_price_change_email(
+                                send_target_price_email(
 
                                     owner.email,
 
@@ -438,15 +427,15 @@ def check_product_prices(app):
                             if email_sent:
 
                                 print(
-                                    "✅ Automatic price "
-                                    "change email sent."
+                                    "✅ Target price "
+                                    "email sent."
                                 )
 
                             else:
 
                                 print(
-                                    "⚠️ Automatic price "
-                                    "change email failed."
+                                    "⚠️ Target price "
+                                    "email failed."
                                 )
 
 
@@ -460,10 +449,19 @@ def check_product_prices(app):
 
                     else:
 
-                        print(
-                            "ℹ️ No price change. "
-                            "Automatic email not sent."
-                        )
+                        if new_price <= target_price:
+
+                            print(
+                                "ℹ️ Target already reached. "
+                                "Email not repeated."
+                            )
+
+                        else:
+
+                            print(
+                                "ℹ️ Target not reached. "
+                                "No target email."
+                            )
 
 
                     # =========================================
@@ -494,37 +492,36 @@ def check_product_prices(app):
 
 
                     # =========================================
-                    # TARGET PRICE CHECK
+                    # UPDATE IMAGE IF AVAILABLE
                     # =========================================
 
-                    if new_price <= target_price:
-
-                        print()
-                        print(
-                            "🎯 TARGET PRICE REACHED!"
-                        )
-
-                        print(
-                            f"   Current: "
-                            f"₹{new_price:.2f}"
-                        )
-
-                        print(
-                            f"   Target : "
-                            f"₹{target_price:.2f}"
-                        )
+                    scraped_image = result.get("image")
 
 
-                        product.status = "Target Reached"
+                    if scraped_image:
 
-
-                    else:
-
-                        product.status = "Tracking"
+                        product.image_url = scraped_image
 
 
                     # =========================================
-                    # COMMIT DATABASE
+                    # UPDATE PRODUCT NAME IF AVAILABLE
+                    # =========================================
+
+                    scraped_name = result.get(
+                        "product_name"
+                    )
+
+
+                    if (
+                        scraped_name
+                        and scraped_name != "Unknown Product"
+                    ):
+
+                        product.product_name = scraped_name
+
+
+                    # =========================================
+                    # COMMIT
                     # =========================================
 
                     db.session.commit()
@@ -535,23 +532,17 @@ def check_product_prices(app):
                     # =========================================
 
                     print()
-                    print(
-                        "✅ PRODUCT UPDATED"
-                    )
-
+                    print("✅ PRODUCT UPDATED")
                     print(
                         f"📦 {product.product_name}"
                     )
-
                     print(
                         f"💰 ₹{new_price:.2f}"
                     )
-
                     print(
                         f"📊 Direction: "
                         f"{product.price_direction}"
                     )
-
                     print(
                         f"📌 Status: "
                         f"{product.status}"
@@ -562,21 +553,17 @@ def check_product_prices(app):
 
                     db.session.rollback()
 
-
                     print()
                     print(
                         "❌ PRODUCT PROCESSING ERROR"
                     )
-
                     print(
                         f"📦 {product.product_name}"
                     )
-
                     print(
                         f"❌ Error: "
                         f"{product_error}"
                     )
-
 
                     continue
 
@@ -585,12 +572,8 @@ def check_product_prices(app):
 
             db.session.rollback()
 
-
             print()
-            print(
-                "❌ SCHEDULER ERROR"
-            )
-
+            print("❌ SCHEDULER ERROR")
             print(
                 f"❌ Error: "
                 f"{scheduler_error}"
@@ -640,7 +623,7 @@ def start_scheduler(app):
 
 
     # -------------------------------------------------------
-    # ADD AUTOMATIC PRICE CHECKING JOB
+    # ADD JOB
     # -------------------------------------------------------
 
     scheduler.add_job(
@@ -650,10 +633,6 @@ def start_scheduler(app):
         args=[app],
 
         trigger="interval",
-
-        # -------------------------------------------------
-        # CHECK EVERY 30 MINUTES
-        # -------------------------------------------------
 
         minutes=30,
 
@@ -671,13 +650,17 @@ def start_scheduler(app):
 
 
     # -------------------------------------------------------
-    # START SCHEDULER
+    # START
     # -------------------------------------------------------
 
     scheduler.start()
 
 
     print()
+    print(
+        "=========================================="
+    )
+
     print(
         "🚀 Automatic Price Tracker Scheduler Started"
     )
@@ -687,12 +670,20 @@ def start_scheduler(app):
     )
 
     print(
-        "🔄 24/7 automatic tracking enabled"
+        "🔄 Automatic tracking enabled"
+    )
+
+    print(
+        "📧 Target-price email alerts enabled"
+    )
+
+    print(
+        "=========================================="
     )
 
 
     # -------------------------------------------------------
-    # FIRST PRICE CHECK
+    # FIRST CHECK
     # -------------------------------------------------------
 
     try:

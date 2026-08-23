@@ -1,4 +1,3 @@
-```html
 {% extends "base.html" %}
 
 {% block title %}
@@ -16,6 +15,7 @@ Dashboard - AI Price Tracker
     <div class="dashboard-header">
 
         <div>
+
             <h1>
                 Welcome, {{ current_user.username }} 👋
             </h1>
@@ -23,7 +23,9 @@ Dashboard - AI Price Tracker
             <p class="dashboard-subtitle">
                 Track your product prices easily
             </p>
+
         </div>
+
 
         <a
             class="add-btn"
@@ -103,6 +105,7 @@ Dashboard - AI Price Tracker
         <div class="product-box-header">
 
             <div>
+
                 <h2>
                     📦 Recent Products
                 </h2>
@@ -110,7 +113,9 @@ Dashboard - AI Price Tracker
                 <p>
                     Your tracked products
                 </p>
+
             </div>
+
 
             <span class="product-count">
                 {{ total_products }} Products
@@ -167,7 +172,7 @@ Dashboard - AI Price Tracker
                     <tr>
 
                         <!-- ============================= -->
-                        <!-- Product -->
+                        <!-- PRODUCT -->
                         <!-- ============================= -->
 
                         <td class="product-cell">
@@ -216,44 +221,52 @@ Dashboard - AI Price Tracker
 
 
                         <!-- ============================= -->
-                        <!-- Current Price -->
+                        <!-- CURRENT PRICE -->
                         <!-- ============================= -->
 
                         <td>
 
                             <strong class="current-price">
-                                ₹{{ "%.2f"|format(product.current_price) }}
+
+                                ₹{{ "%.2f"|format(
+                                    product.current_price
+                                ) }}
+
                             </strong>
 
                         </td>
 
 
                         <!-- ============================= -->
-                        <!-- Target Price -->
+                        <!-- TARGET PRICE -->
                         <!-- ============================= -->
 
                         <td>
 
                             <strong class="target-price">
-                                ₹{{ "%.2f"|format(product.target_price) }}
+
+                                ₹{{ "%.2f"|format(
+                                    product.target_price
+                                ) }}
+
                             </strong>
 
                         </td>
 
 
                         <!-- ============================= -->
-                        <!-- Price Direction -->
+                        <!-- PRICE DIRECTION -->
                         <!-- ============================= -->
 
                         <td>
 
-                            {% if product.price_direction == "Down" %}
+                            {% if product.price_direction == "Dropped" %}
 
                                 <span class="direction down">
                                     📉 Down
                                 </span>
 
-                            {% elif product.price_direction == "Up" %}
+                            {% elif product.price_direction == "Increased" %}
 
                                 <span class="direction up">
                                     📈 Up
@@ -271,7 +284,7 @@ Dashboard - AI Price Tracker
 
 
                         <!-- ============================= -->
-                        <!-- Status -->
+                        <!-- STATUS -->
                         <!-- ============================= -->
 
                         <td>
@@ -294,7 +307,7 @@ Dashboard - AI Price Tracker
 
 
                         <!-- ============================= -->
-                        <!-- Last Checked -->
+                        <!-- LAST CHECKED -->
                         <!-- ============================= -->
 
                         <td>
@@ -321,12 +334,10 @@ Dashboard - AI Price Tracker
 
 
                         <!-- ============================= -->
-                        <!-- Actions -->
+                        <!-- ACTIONS -->
                         <!-- ============================= -->
 
                         <td class="actions">
-
-                            <!-- Open Product -->
 
                             {% if product.product_url %}
 
@@ -343,8 +354,6 @@ Dashboard - AI Price Tracker
                             {% endif %}
 
 
-                            <!-- Price History -->
-
                             <a
                                 href="{{ url_for(
                                     'dashboard.product_history',
@@ -357,8 +366,6 @@ Dashboard - AI Price Tracker
                             </a>
 
 
-                            <!-- Test Email -->
-
                             <a
                                 href="{{ url_for(
                                     'dashboard.test_email',
@@ -366,13 +373,13 @@ Dashboard - AI Price Tracker
                                 ) }}"
                                 class="email-test-btn"
                                 title="Send Test Email"
-                                onclick="return confirm('Send a test email to your registered email?')"
+                                onclick="return confirm(
+                                    'Send a test email to your registered email?'
+                                )"
                             >
                                 📧
                             </a>
 
-
-                            <!-- Delete Product -->
 
                             <a
                                 href="{{ url_for(
@@ -381,7 +388,9 @@ Dashboard - AI Price Tracker
                                 ) }}"
                                 class="delete-btn"
                                 title="Delete Product"
-                                onclick="return confirm('Delete this product?')"
+                                onclick="return confirm(
+                                    'Delete this product?'
+                                )"
                             >
                                 🗑️
                             </a>
@@ -394,7 +403,7 @@ Dashboard - AI Price Tracker
                     {% else %}
 
                     <!-- ============================= -->
-                    <!-- Empty Products -->
+                    <!-- EMPTY -->
                     <!-- ============================= -->
 
                     <tr>
@@ -417,7 +426,9 @@ Dashboard - AI Price Tracker
 
                                 <a
                                     class="add-btn"
-                                    href="{{ url_for('dashboard.add_product') }}"
+                                    href="{{ url_for(
+                                        'dashboard.add_product'
+                                    ) }}"
                                 >
                                     ➕ Add Product
                                 </a>

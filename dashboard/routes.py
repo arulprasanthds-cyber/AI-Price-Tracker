@@ -1,4 +1,3 @@
-
 from flask import (
     render_template,
     request,
@@ -73,18 +72,12 @@ def add_product():
 
     if request.method == "POST":
 
-        product_name = request.form.get(
-            "product_name",
-            ""
-        ).strip()
+        # =================================================
+        # GET FORM DATA
+        # =================================================
 
         product_url = request.form.get(
             "product_url",
-            ""
-        ).strip()
-
-        current_price = request.form.get(
-            "current_price",
             ""
         ).strip()
 
@@ -93,36 +86,31 @@ def add_product():
             ""
         ).strip()
 
+
         # =================================================
-        # VALIDATION
+        # URL VALIDATION
         # =================================================
-
-        if not product_name:
-
-            flash(
-                "Product name is required.",
-                "danger"
-            )
-
-            return redirect(
-                url_for("dashboard.add_product")
-            )
 
         if not product_url:
 
             flash(
-                "Product URL is required.",
+                "❌ Product URL is required.",
                 "danger"
             )
 
             return redirect(
                 url_for("dashboard.add_product")
             )
+
+
+        # =================================================
+        # TARGET PRICE VALIDATION
+        # =================================================
 
         if not target_price:
 
             flash(
-                "Target price is required.",
+                "❌ Target price is required.",
                 "danger"
             )
 
@@ -130,9 +118,6 @@ def add_product():
                 url_for("dashboard.add_product")
             )
 
-        # =================================================
-        # TARGET PRICE
-        # =================================================
 
         try:
 
@@ -141,12 +126,16 @@ def add_product():
             )
 
             if target_price_value <= 0:
+
                 raise ValueError
 
-        except (ValueError, TypeError):
+        except (
+            ValueError,
+            TypeError
+        ):
 
             flash(
-                "Please enter a valid target price.",
+                "❌ Please enter a valid target price.",
                 "danger"
             )
 
@@ -154,13 +143,44 @@ def add_product():
                 url_for("dashboard.add_product")
             )
 
+
+        # =================================================
+        # CHECK DUPLICATE PRODUCT
+        # =================================================
+
+        existing_product = Product.query.filter_by(
+            user_id=current_user.id,
+            product_url=product_url
+        ).first()
+
+
+        if existing_product:
+
+            flash(
+                "⚠️ You are already tracking this product.",
+                "warning"
+            )
+
+            return redirect(
+                url_for("dashboard.dashboard_home")
+            )
+
+
         # =================================================
         # SCRAPE PRODUCT
         # =================================================
 
-        scraped_price = None
-        image_url = None
-        scraped_name = None
+        print()
+        print("==========================================")
+        print("🔍 ADDING NEW PRODUCT")
+        print("==========================================")
+        print(
+            f"🔗 URL: {product_url}"
+        )
+        print(
+            f"🎯 Target: ₹{target_price_value:.2f}"
+        )
+
 
         try:
 
@@ -168,103 +188,148 @@ def add_product():
                 product_url
             )
 
-            if result and result.get("success"):
-
-                scraped_price = result.get(
-                    "current_price"
-                )
-
-                image_url = result.get(
-                    "image"
-                )
-
-                scraped_name = result.get(
-                    "product_name"
-                )
-
         except Exception as e:
 
             print(
-                f"⚠️ Product scraping error: {e}"
+                f"❌ Scraper exception: {e}"
             )
 
-        # =================================================
-        # CURRENT PRICE
-        # =================================================
+            flash(
+                "❌ Unable to read product details from this URL.",
+                "danger"
+            )
 
-        current_price_value = None
+            return redirect(
+                url_for("dashboard.add_product")
+            )
 
-        if scraped_price is not None:
-
-            try:
-
-                current_price_value = float(
-                    scraped_price
-                )
-
-                if current_price_value <= 0:
-                    current_price_value = None
-
-            except (
-                TypeError,
-                ValueError
-            ):
-
-                current_price_value = None
 
         # =================================================
-        # MANUAL PRICE FALLBACK
+        # SCRAPER RESULT VALIDATION
         # =================================================
 
-        if current_price_value is None:
+        if not result:
 
-            if not current_price:
+            flash(
+                "❌ Product scraper returned no data.",
+                "danger"
+            )
 
-                flash(
-                    "Could not fetch product price. "
-                    "Please enter current price manually.",
-                    "danger"
-                )
+            return redirect(
+                url_for("dashboard.add_product")
+            )
 
-                return redirect(
-                    url_for("dashboard.add_product")
-                )
 
-            try:
+        if not result.get("success"):
 
-                current_price_value = float(
-                    current_price
-                )
+            error_message = result.get(
+                "error",
+                "Unable to fetch product details."
+            )
 
-                if current_price_value <= 0:
-                    raise ValueError
+            print(
+                f"❌ Scraping failed: {error_message}"
+            )
 
-            except (
-                ValueError,
-                TypeError
-            ):
+            flash(
+                f"❌ {error_message}",
+                "danger"
+            )
 
-                flash(
-                    "Please enter a valid current price.",
-                    "danger"
-                )
+            return redirect(
+                url_for("dashboard.add_product")
+            )
 
-                return redirect(
-                    url_for("dashboard.add_product")
-                )
 
         # =================================================
-        # PRODUCT NAME
+        # GET AUTOMATIC PRODUCT NAME
         # =================================================
 
-        final_product_name = (
-            scraped_name
-            if scraped_name
-            else product_name
+        product_name = result.get(
+            "product_name"
         )
 
+
+        if not product_name:
+
+            product_name = "Unknown Product"
+
+
         # =================================================
-        # PRODUCT STATUS
+        # GET AUTOMATIC CURRENT PRICE
+        # =================================================
+
+        scraped_price = result.get(
+            "current_price"
+        )
+
+
+        if scraped_price is None:
+
+            flash(
+                "❌ Current product price could not be detected.",
+                "danger"
+            )
+
+            return redirect(
+                url_for("dashboard.add_product")
+            )
+
+
+        try:
+
+            current_price_value = float(
+                scraped_price
+            )
+
+        except (
+            TypeError,
+            ValueError
+        ):
+
+            flash(
+                "❌ Scraper returned an invalid price.",
+                "danger"
+            )
+
+            return redirect(
+                url_for("dashboard.add_product")
+            )
+
+
+        if current_price_value <= 0:
+
+            flash(
+                "❌ Invalid product price detected.",
+                "danger"
+            )
+
+            return redirect(
+                url_for("dashboard.add_product")
+            )
+
+
+        # =================================================
+        # GET AUTOMATIC PRODUCT IMAGE
+        # =================================================
+
+        image_url = result.get(
+            "image"
+        )
+
+
+        # =================================================
+        # WEBSITE
+        # =================================================
+
+        website = result.get(
+            "website",
+            "unknown"
+        )
+
+
+        # =================================================
+        # DETERMINE INITIAL STATUS
         # =================================================
 
         if current_price_value <= target_price_value:
@@ -275,58 +340,150 @@ def add_product():
 
             product_status = "Tracking"
 
+
         # =================================================
         # CREATE PRODUCT
         # =================================================
 
         product = Product(
+
             user_id=current_user.id,
-            product_name=final_product_name,
+
+            product_name=product_name,
+
             product_url=product_url,
+
             image_url=image_url,
+
             current_price=current_price_value,
+
             target_price=target_price_value,
+
             price_direction="Same",
+
             status=product_status,
+
             last_checked=datetime.utcnow(),
+
             created_at=datetime.utcnow()
+
         )
 
-        db.session.add(product)
 
-        db.session.commit()
+        # =================================================
+        # SAVE PRODUCT
+        # =================================================
+
+        try:
+
+            db.session.add(product)
+
+            db.session.commit()
+
+        except Exception as e:
+
+            db.session.rollback()
+
+            print(
+                f"❌ Product database save failed: {e}"
+            )
+
+            flash(
+                "❌ Could not save the product.",
+                "danger"
+            )
+
+            return redirect(
+                url_for("dashboard.add_product")
+            )
+
 
         # =================================================
         # FIRST PRICE HISTORY
         # =================================================
 
-        history = PriceHistory(
-            product_id=product.id,
-            price=current_price_value,
-            checked_at=datetime.utcnow()
-        )
+        try:
 
-        db.session.add(history)
+            history = PriceHistory(
 
-        db.session.commit()
+                product_id=product.id,
+
+                price=current_price_value,
+
+                checked_at=datetime.utcnow()
+
+            )
+
+            db.session.add(history)
+
+            db.session.commit()
+
+        except Exception as e:
+
+            db.session.rollback()
+
+            print(
+                f"⚠️ Price history save failed: {e}"
+            )
+
+
+        # =================================================
+        # LOG
+        # =================================================
+
+        print()
+        print("==========================================")
+        print("✅ PRODUCT SAVED SUCCESSFULLY")
+        print("==========================================")
 
         print(
-            f"✅ Product saved permanently: "
-            f"{final_product_name}"
+            f"👤 User: {current_user.username}"
         )
 
         print(
-            f"👤 Owner: {current_user.email}"
+            f"🌐 Website: {website.upper()}"
         )
+
+        print(
+            f"📦 Product: {product_name}"
+        )
+
+        print(
+            f"💰 Current Price: "
+            f"₹{current_price_value:.2f}"
+        )
+
+        print(
+            f"🎯 Target Price: "
+            f"₹{target_price_value:.2f}"
+        )
+
+        print(
+            f"📌 Status: {product_status}"
+        )
+
+        print("==========================================")
+
+
+        # =================================================
+        # SUCCESS MESSAGE
+        # =================================================
 
         flash(
-            "✅ Product added and saved successfully!",
+            "✅ Product added successfully! "
+            "Automatic price tracking started.",
             "success"
         )
+
 
         return redirect(
             url_for("dashboard.dashboard_home")
         )
+
+
+    # =====================================================
+    # GET REQUEST
+    # =====================================================
 
     return render_template(
         "add_product.html"
@@ -348,10 +505,11 @@ def delete_product(id):
         user_id=current_user.id
     ).first()
 
+
     if not product:
 
         flash(
-            "Product not found.",
+            "❌ Product not found.",
             "danger"
         )
 
@@ -359,26 +517,66 @@ def delete_product(id):
             url_for("dashboard.dashboard_home")
         )
 
+
     product_name = product.product_name
 
-    # Delete price history
-    PriceHistory.query.filter_by(
-        product_id=product.id
-    ).delete()
 
-    # Delete product
-    db.session.delete(product)
+    # =====================================================
+    # DELETE PRICE HISTORY
+    # =====================================================
 
-    db.session.commit()
+    try:
 
+        PriceHistory.query.filter_by(
+            product_id=product.id
+        ).delete()
+
+    except Exception as e:
+
+        print(
+            f"⚠️ Price history delete error: {e}"
+        )
+
+
+    # =====================================================
+    # DELETE PRODUCT
+    # =====================================================
+
+    try:
+
+        db.session.delete(product)
+
+        db.session.commit()
+
+    except Exception as e:
+
+        db.session.rollback()
+
+        flash(
+            "❌ Could not delete product.",
+            "danger"
+        )
+
+        print(
+            f"❌ Delete error: {e}"
+        )
+
+        return redirect(
+            url_for("dashboard.dashboard_home")
+        )
+
+
+    print()
     print(
         f"🗑️ Product deleted: {product_name}"
     )
+
 
     flash(
         "🗑️ Product deleted successfully.",
         "success"
     )
+
 
     return redirect(
         url_for("dashboard.dashboard_home")
@@ -400,15 +598,18 @@ def product_history(id):
         user_id=current_user.id
     ).first_or_404()
 
+
     history = PriceHistory.query.filter_by(
         product_id=product.id
     ).order_by(
         PriceHistory.checked_at.asc()
     ).all()
 
+
     prices = []
 
     dates = []
+
 
     for item in history:
 
@@ -422,11 +623,17 @@ def product_history(id):
             )
         )
 
+
     return render_template(
+
         "price_history.html",
+
         product=product,
+
         prices=prices,
+
         dates=dates
+
     )
 
 
@@ -441,7 +648,7 @@ def product_history(id):
 def test_email(id):
 
     # =====================================================
-    # FIND USER'S OWN PRODUCT
+    # FIND USER'S PRODUCT
     # =====================================================
 
     product = Product.query.filter_by(
@@ -449,10 +656,11 @@ def test_email(id):
         user_id=current_user.id
     ).first()
 
+
     if not product:
 
         flash(
-            "Product not found.",
+            "❌ Product not found.",
             "danger"
         )
 
@@ -460,89 +668,105 @@ def test_email(id):
             url_for("dashboard.dashboard_home")
         )
 
+
     # =====================================================
-    # SEND EMAIL
+    # CHECK EMAIL
+    # =====================================================
+
+    if not current_user.email:
+
+        flash(
+            "❌ Your account email is missing.",
+            "danger"
+        )
+
+        return redirect(
+            url_for("dashboard.dashboard_home")
+        )
+
+
+    # =====================================================
+    # SEND TEST EMAIL
     # =====================================================
 
     try:
 
         msg = Message(
-            subject="AI Price Tracker - Test Email",
+
+            subject="🔔 AI Price Tracker - Test Email",
+
             recipients=[
                 current_user.email
             ]
+
         )
+
 
         msg.body = f"""
 Hello {current_user.username},
 
 This is a test email from AI Price Tracker.
 
-----------------------------------------
+========================================
 PRODUCT DETAILS
-----------------------------------------
+========================================
 
-Product Name : {product.product_name}
-Current Price: ₹{product.current_price}
-Target Price : ₹{product.target_price}
-Status       : {product.status}
+Product Name  : {product.product_name}
 
-----------------------------------------
+Current Price : ₹{product.current_price:.2f}
+
+Target Price  : ₹{product.target_price:.2f}
+
+Status        : {product.status}
+
+Price Direction: {product.price_direction}
+
+========================================
 
 Your email notification system is working successfully.
 
 AI Price Tracker
+Automatic Price Monitoring System
 """
+
 
         mail.send(msg)
 
-        print(
-            "=========================================="
-        )
 
-        print(
-            "✅ TEST EMAIL SENT SUCCESSFULLY"
-        )
-
+        print()
+        print("==========================================")
+        print("✅ TEST EMAIL SENT SUCCESSFULLY")
         print(
             f"📧 To: {current_user.email}"
         )
-
         print(
             f"📦 Product: {product.product_name}"
         )
+        print("==========================================")
 
-        print(
-            "=========================================="
-        )
 
         flash(
             "📧 Test email sent successfully!",
             "success"
         )
 
+
     except Exception as e:
 
-        print(
-            "=========================================="
-        )
-
-        print(
-            "❌ EMAIL SENDING FAILED"
-        )
-
+        print()
+        print("==========================================")
+        print("❌ EMAIL SENDING FAILED")
         print(
             f"❌ Error: {e}"
         )
+        print("==========================================")
 
-        print(
-            "=========================================="
-        )
 
         flash(
             f"❌ Email sending failed: {e}",
             "danger"
         )
+
 
     return redirect(
         url_for("dashboard.dashboard_home")
